@@ -1,0 +1,7 @@
+[
+  {"name": "Alice Chen", "slack_id": "@alice", "role": "primary", "start": "Mon", "end": "Wed"},
+  {"name": "Bob Martinez", "slack_id": "@bob", "role": "primary", "start": "Thu", "end": "Fri"},
+  {"name": "Carol Singh", "slack_id": "@carol", "role": "primary", "start": "Sat", "end": "Sun"},
+  {"name": "Dave Kim", "slack_id": "@dave", "role": "secondary", "start": "Mon", "end": "Sun"},
+  {"name": "Eve Johnson", "slack_id": "@eve", "role": "manager", "start": "Mon", "end": "Sun"}
+]
