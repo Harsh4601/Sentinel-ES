@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sentinel-ES | Autonomous SRE Dashboard</title>
+  <style>
+    :root {
+      --bg: #0f1117; --surface: #1a1d27; --surface2: #232733; --border: #2e3345;
+      --text: #e1e4ed; --dim: #8b8fa3; --accent: #6c5ce7; --green: #00b894;
+      --red: #e74c3c; --orange: #f39c12; --yellow: #fdcb6e; --blue: #74b9ff;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+    header { background:var(--surface); border-bottom:1px solid var(--border); padding:16px 32px; display:flex; align-items:center; justify-content:space-between; }
+    .logo { display:flex; align-items:center; gap:12px; }
+    .logo-icon { width:36px; height:36px; background:linear-gradient(135deg,var(--accent),var(--blue)); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700; color:#fff; }
+    .logo h1 { font-size:20px; font-weight:600; }
+    .logo span { color:var(--dim); font-size:13px; }
+    .header-right { display:flex; gap:12px; align-items:center; }
+    .badge-live { background:rgba(0,184,148,0.15); color:var(--green); font-size:11px; padding:4px 10px; border-radius:20px; font-weight:600; }
+    .dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; background:var(--green); box-shadow:0 0 8px var(--green); }
+    .btn { padding:8px 20px; border:none; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; transition:all 0.2s; }
+    .btn-primary { background:var(--accent); color:#fff; }
+    .btn-primary:hover { background:#5a4bd1; }
+    .btn-outline { background:transparent; color:var(--dim); border:1px solid var(--border); }
+    .btn-outline:hover { border-color:var(--dim); color:var(--text); }
+    .btn-gh { background:#24292e; color:#fff; text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+
+    main { padding:24px 32px; max-width:1400px; margin:0 auto; }
+    .banner { background:linear-gradient(135deg,rgba(108,92,231,0.15),rgba(116,185,255,0.1)); border:1px solid rgba(108,92,231,0.3); border-radius:12px; padding:20px 24px; margin-bottom:24px; display:flex; align-items:center; justify-content:space-between; }
+    .banner-text { font-size:14px; color:var(--text); }
+    .banner-text strong { color:var(--accent); }
+    .banner .btn { margin-left:16px; flex-shrink:0; }
+
+    .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
+    .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; transition:border-color 0.3s; }
+    .stat-card:hover { border-color:var(--accent); }
+    .stat-label { font-size:12px; color:var(--dim); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; }
+    .stat-value { font-size:28px; font-weight:700; }
+    .stat-sub { font-size:12px; color:var(--dim); margin-top:4px; }
+    .stat-bar { height:4px; border-radius:2px; margin-top:12px; background:var(--surface2); overflow:hidden; }
+    .stat-bar-fill { height:100%; border-radius:2px; transition:width 1.5s ease; }
+
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px; }
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+    .card-header { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+    .card-header h2 { font-size:15px; font-weight:600; }
+    .card-count { font-size:12px; color:var(--dim); }
+    .card-body { padding:16px 20px; }
+
+    .incident { padding:14px 16px; border-radius:8px; background:var(--surface2); margin-bottom:10px; border-left:3px solid var(--border); transition:transform 0.2s; }
+    .incident:hover { transform:translateX(2px); }
+    .incident.p1 { border-left-color:var(--red); }
+    .incident.p2 { border-left-color:var(--orange); }
+    .incident.approved { opacity:0.6; }
+    .incident-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+    .sev { font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; }
+    .sev.p1 { background:rgba(231,76,60,0.2); color:var(--red); }
+    .sev.p2 { background:rgba(243,156,18,0.2); color:var(--orange); }
+    .status { font-size:11px; padding:2px 8px; border-radius:4px; margin-left:6px; }
+    .status.open { background:rgba(231,76,60,0.15); color:var(--red); }
+    .status.approved { background:rgba(0,184,148,0.15); color:var(--green); }
+    .incident-cause { font-size:13px; line-height:1.5; }
+    .incident-meta { font-size:11px; color:var(--dim); margin-top:8px; }
+    .incident-actions { margin-top:10px; display:flex; gap:8px; }
+    .incident-actions .btn { font-size:11px; padding:4px 12px; }
+
+    .log-entry { display:grid; grid-template-columns:70px 90px 1fr; gap:12px; padding:8px 0; border-bottom:1px solid var(--border); font-size:13px; }
+    .log-entry:last-child { border-bottom:none; }
+    .log-time { color:var(--dim); font-family:monospace; font-size:12px; }
+    .log-agent { font-weight:500; }
+    .log-agent.orch { color:var(--accent); }
+    .log-agent.sleuth { color:var(--yellow); }
+    .log-agent.hist { color:var(--blue); }
+    .log-agent.scribe { color:var(--green); }
+    .log-result { color:var(--text); }
+
+    .arch-card { grid-column:1/-1; }
+    .arch { padding:24px; font-family:monospace; font-size:13px; line-height:1.8; color:var(--dim); white-space:pre; overflow-x:auto; }
+
+    .tech-strip { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:24px; }
+    .tech-tag { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:6px 14px; font-size:12px; color:var(--dim); }
+
+    .footer { text-align:center; padding:24px; color:var(--dim); font-size:12px; border-top:1px solid var(--border); margin-top:16px; }
+    .footer a { color:var(--accent); text-decoration:none; }
+
+    .fade-in { animation:fadeIn 0.6s ease forwards; opacity:0; }
+    @keyframes fadeIn { to { opacity:1; } }
+    .delay-1 { animation-delay:0.1s; } .delay-2 { animation-delay:0.2s; }
+    .delay-3 { animation-delay:0.3s; } .delay-4 { animation-delay:0.4s; }
+
+    @media(max-width:900px) {
+      .stats-grid { grid-template-columns:repeat(2,1fr); }
+      .grid-2 { grid-template-columns:1fr; }
+      main { padding:16px; }
+      header { padding:12px 16px; flex-wrap:wrap; gap:12px; }
+      .banner { flex-direction:column; gap:12px; text-align:center; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <div class="logo-icon">S</div>
+      <div>
+        <h1>Sentinel-ES</h1>
+        <span>Autonomous SRE Agent Dashboard</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <span><span class="dot"></span>ES Connected (yellow)</span>
+      <span class="badge-live">DEMO</span>
+      <a href="https://github.com/Harsh4601/Sentinel-ES" target="_blank" class="btn btn-gh">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        GitHub
+      </a>
+      <button class="btn btn-primary" onclick="runDemo()">Trigger Investigation</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="banner fade-in">
+      <div class="banner-text">
+        This is a <strong>live demo</strong> of Sentinel-ES showing a simulated incident investigation. The full system runs with Elasticsearch, Groq LLM, and Slack integration.
+        Click <strong>"Trigger Investigation"</strong> to see the multi-agent pipeline in action.
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card fade-in delay-1">
+        <div class="stat-label">Total Incidents</div>
+        <div class="stat-value" id="s-total">3</div>
+        <div class="stat-sub">Last: 2 min ago</div>
+        <div class="stat-bar"><div class="stat-bar-fill" style="width:60%;background:var(--accent)"></div></div>
+      </div>
+      <div class="stat-card fade-in delay-2">
+        <div class="stat-label">Open Incidents</div>
+        <div class="stat-value" style="color:var(--red)" id="s-open">1</div>
+        <div class="stat-sub">Awaiting approval</div>
+        <div class="stat-bar"><div class="stat-bar-fill" style="width:33%;background:var(--red)"></div></div>
+      </div>
+      <div class="stat-card fade-in delay-3">
+        <div class="stat-label">Resolved</div>
+        <div class="stat-value" style="color:var(--green)" id="s-resolved">2</div>
+        <div class="stat-sub">Auto-remediated</div>
+        <div class="stat-bar"><div class="stat-bar-fill" style="width:67%;background:var(--green)"></div></div>
+      </div>
+      <div class="stat-card fade-in delay-4">
+        <div class="stat-label">Current Error Rate</div>
+        <div class="stat-value" id="s-rate">52.5</div>
+        <div class="stat-sub" id="s-baseline">Baseline: 6.8 (7.7x spike)</div>
+        <div class="stat-bar"><div class="stat-bar-fill" style="width:85%;background:var(--orange)"></div></div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card fade-in delay-2">
+        <div class="card-header">
+          <h2>Recent Incidents</h2>
+          <span class="card-count">3 total</span>
+        </div>
+        <div class="card-body" id="incidents">
+          <div class="incident p1" id="inc-live">
+            <div class="incident-header">
+              <div><span class="sev p1">P1</span><span class="status open">open</span><span style="font-size:11px;color:var(--dim);margin-left:8px">INC-7d60</span></div>
+              <span style="font-size:11px;color:var(--dim)">10:48:44 PM</span>
+            </div>
+            <div class="incident-cause">AttributeError in pipeline.py caused by null user object due to faulty authentication flow after connection pool size was reduced from 10 to 5.</div>
+            <div class="incident-meta">Action: Rollback commit a1b2c3d4 and increase pool size back to 10</div>
+            <div class="incident-actions" id="inc-actions">
+              <button class="btn btn-primary" onclick="approveInc()">Approve Rollback</button>
+              <button class="btn btn-outline" onclick="dismissInc()">Dismiss</button>
+            </div>
+          </div>
+          <div class="incident p2 approved">
+            <div class="incident-header">
+              <div><span class="sev p2">P2</span><span class="status approved">approved</span><span style="font-size:11px;color:var(--dim);margin-left:8px">INC-3e89</span></div>
+              <span style="font-size:11px;color:var(--dim)">9:32:11 PM</span>
+            </div>
+            <div class="incident-cause">TimeoutError on payment-service upstream calls after DNS resolver configuration change in deployment #143.</div>
+            <div class="incident-meta">Resolved in 4 minutes via rollback</div>
+          </div>
+          <div class="incident p2 approved">
+            <div class="incident-header">
+              <div><span class="sev p2">P2</span><span class="status approved">approved</span><span style="font-size:11px;color:var(--dim);margin-left:8px">INC-a4f2</span></div>
+              <span style="font-size:11px;color:var(--dim)">7:15:30 PM</span>
+            </div>
+            <div class="incident-cause">ConnectionRefusedError to database after max pool size was reduced, causing connection exhaustion under load.</div>
+            <div class="incident-meta">Resolved in 8 minutes via config change</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card fade-in delay-3">
+        <div class="card-header">
+          <h2>Agent Activity Log</h2>
+          <span class="card-count" id="log-count">10 entries</span>
+        </div>
+        <div class="card-body" id="activity-log" style="max-height:460px;overflow-y:auto">
+          <div class="log-entry"><span class="log-time">22:48:44</span><span class="log-agent orch">Orchestrator</span><span class="log-result">Starting anomaly check</span></div>
+          <div class="log-entry"><span class="log-time">22:48:44</span><span class="log-agent orch">Orchestrator</span><span class="log-result">Anomaly=True (7.7x spike detected)</span></div>
+          <div class="log-entry"><span class="log-time">22:48:44</span><span class="log-agent orch">Orchestrator</span><span class="log-result">Launching Sleuth, Historian, Scribe in parallel</span></div>
+          <div class="log-entry"><span class="log-time">22:48:44</span><span class="log-agent sleuth">Sleuth</span><span class="log-result">Searching errors from last 30 minutes</span></div>
+          <div class="log-entry"><span class="log-time">22:48:44</span><span class="log-agent sleuth">Sleuth</span><span class="log-result">Completed in 458ms (model=llama-3.1-8b-instant)</span></div>
+          <div class="log-entry"><span class="log-time">22:48:44</span><span class="log-agent sleuth">Sleuth</span><span class="log-result">Found: AttributeError in pipeline.py</span></div>
+          <div class="log-entry"><span class="log-time">22:48:45</span><span class="log-agent hist">Historian</span><span class="log-result">Searching commits for: AttributeError</span></div>
+          <div class="log-entry"><span class="log-time">22:48:45</span><span class="log-agent hist">Historian</span><span class="log-result">Completed in 312ms (model=llama-3.1-8b-instant)</span></div>
+          <div class="log-entry"><span class="log-time">22:48:45</span><span class="log-agent hist">Historian</span><span class="log-result">Culprit: a1b2c3d4 by Alice Chen (pool size change)</span></div>
+          <div class="log-entry"><span class="log-time">22:48:45</span><span class="log-agent scribe">Scribe</span><span class="log-result">Searching runbooks for: AttributeError</span></div>
+          <div class="log-entry"><span class="log-time">22:48:46</span><span class="log-agent scribe">Scribe</span><span class="log-result">Completed in 709ms (model=llama-3.1-8b-instant)</span></div>
+          <div class="log-entry"><span class="log-time">22:48:46</span><span class="log-agent scribe">Scribe</span><span class="log-result">Found 2 runbooks, 3 remediation steps</span></div>
+          <div class="log-entry"><span class="log-time">22:48:46</span><span class="log-agent orch">Orchestrator</span><span class="log-result">All agents reported back</span></div>
+          <div class="log-entry"><span class="log-time">22:48:47</span><span class="log-agent orch">Orchestrator</span><span class="log-result">Conflict resolution complete. Severity: P1</span></div>
+          <div class="log-entry"><span class="log-time">22:48:47</span><span class="log-agent orch">Orchestrator</span><span class="log-result">Incident INC-7d60 created. Posted to Slack.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tech-strip fade-in delay-4">
+      <span class="tech-tag">Python 3.11</span>
+      <span class="tech-tag">Elasticsearch 8.x</span>
+      <span class="tech-tag">ES|QL</span>
+      <span class="tech-tag">FastAPI</span>
+      <span class="tech-tag">Groq LLM</span>
+      <span class="tech-tag">LLaMA 3.1</span>
+      <span class="tech-tag">Slack API</span>
+      <span class="tech-tag">GitHub API</span>
+      <span class="tech-tag">Docker</span>
+      <span class="tech-tag">Kibana</span>
+      <span class="tech-tag">asyncio</span>
+    </div>
+
+    <div class="card arch-card fade-in delay-4">
+      <div class="card-header"><h2>System Architecture</h2></div>
+      <div class="arch">ES Anomaly Detection  ──>  <span style="color:var(--accent)">Orchestrator</span>  ──>  ┌ <span style="color:var(--yellow)">Sleuth</span>  (APM Errors from Elasticsearch)
+   (ES|QL 3x spike)                        ├ <span style="color:var(--blue)">Historian</span> (Git Commits from GitHub)
+                                           └ <span style="color:var(--green)">Scribe</span>   (Runbooks from Elasticsearch)
+                                                    │
+                              Conflict Resolution  <──┘  (LLM synthesizes all findings)
+                                      │
+                              <span style="color:var(--orange)">Slack Alert</span>  ──>  Human Approval  ──>  Rollback
+                         [Approve] [Dismiss]     (guardrails enforce)</div>
+    </div>
+  </main>
+
+  <div class="footer">
+    Built for the <a href="#">Elasticsearch Agent Builder Hackathon 2026</a> &middot;
+    <a href="https://github.com/Harsh4601/Sentinel-ES">View Source on GitHub</a> &middot;
+    Powered by Elasticsearch, Groq, and Slack
+  </div>
+
+  <script>
+    function runDemo() {
+      const btn = event.target;
+      btn.disabled = true;
+      btn.innerHTML = '<span style="display:inline-block;width:14px;height:14px;border:2px solid transparent;border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px"></span>Investigating...';
+
+      const log = document.getElementById('activity-log');
+      const steps = [
+        { t:400, agent:'orch', text:'Starting anomaly check...' },
+        { t:900, agent:'orch', text:'Anomaly detected! 8.2x above baseline' },
+        { t:1200, agent:'orch', text:'Launching 3 agents in parallel' },
+        { t:1600, agent:'sleuth', text:'Pulling APM errors from Elasticsearch...' },
+        { t:2200, agent:'sleuth', text:'Found: ConnectionRefusedError (15 occurrences)' },
+        { t:2600, agent:'hist', text:'Analyzing 5 recent GitHub commits...' },
+        { t:3200, agent:'hist', text:'Culprit: commit c3d4e5f by Carol Singh (#144)' },
+        { t:3500, agent:'scribe', text:'Searching runbooks index...' },
+        { t:4100, agent:'scribe', text:'Matched: DB Connection Timeout runbook' },
+        { t:4600, agent:'orch', text:'Synthesizing findings, resolving conflicts...' },
+        { t:5400, agent:'orch', text:'Incident INC-new1 created. Severity: P1. Posted to Slack.' },
+      ];
+
+      const now = new Date();
+      steps.forEach(s => {
+        setTimeout(() => {
+          const ts = new Date(now.getTime() + s.t);
+          const time = ts.toTimeString().substring(0,8);
+          const cls = s.agent === 'orch' ? 'orch' : s.agent === 'sleuth' ? 'sleuth' : s.agent === 'hist' ? 'hist' : 'scribe';
+          const names = { orch:'Orchestrator', sleuth:'Sleuth', hist:'Historian', scribe:'Scribe' };
+          const entry = document.createElement('div');
+          entry.className = 'log-entry';
+          entry.style.background = 'rgba(108,92,231,0.05)';
+          entry.innerHTML = `<span class="log-time">${time}</span><span class="log-agent ${cls}">${names[s.agent]}</span><span class="log-result">${s.text}</span>`;
+          log.prepend(entry);
+          log.scrollTop = 0;
+          document.getElementById('log-count').textContent = (log.children.length) + ' entries';
+        }, s.t);
+      });
+
+      setTimeout(() => {
+        const inc = document.createElement('div');
+        inc.className = 'incident p1';
+        inc.style.background = 'rgba(108,92,231,0.08)';
+        inc.innerHTML = `
+          <div class="incident-header">
+            <div><span class="sev p1">P1</span><span class="status open">open</span><span style="font-size:11px;color:var(--dim);margin-left:8px">INC-new1</span></div>
+            <span style="font-size:11px;color:var(--dim)">Just now</span>
+          </div>
+          <div class="incident-cause">ConnectionRefusedError to database at 10.0.3.14:5432 after async handler migration in commit #144 broke connection pool lifecycle management.</div>
+          <div class="incident-meta">Action: Revert commit c3d4e5f and restart application pods. Est. fix: 5 minutes</div>
+          <div class="incident-actions">
+            <button class="btn btn-primary" onclick="this.parentElement.parentElement.querySelector('.status').className='status approved';this.parentElement.parentElement.querySelector('.status').textContent='approved';this.parentElement.remove();">Approve Rollback</button>
+            <button class="btn btn-outline" onclick="this.parentElement.remove();">Dismiss</button>
+          </div>`;
+        document.getElementById('incidents').prepend(inc);
+        document.getElementById('s-total').textContent = '4';
+        document.getElementById('s-open').textContent = '2';
+        document.getElementById('s-rate').textContent = '68.3';
+        document.getElementById('s-baseline').textContent = 'Baseline: 6.8 (10.0x spike)';
+
+        btn.disabled = false;
+        btn.textContent = 'Trigger Investigation';
+        btn.style.background = '';
+      }, 5800);
+    }
+
+    function approveInc() {
+      const el = document.getElementById('inc-live');
+      el.querySelector('.status').className = 'status approved';
+      el.querySelector('.status').textContent = 'approved';
+      el.classList.add('approved');
+      document.getElementById('inc-actions').remove();
+      document.getElementById('s-open').textContent = '0';
+      document.getElementById('s-resolved').textContent = '3';
+      const log = document.getElementById('activity-log');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.style.background = 'rgba(0,184,148,0.08)';
+      entry.innerHTML = '<span class="log-time">Just now</span><span class="log-agent orch">Orchestrator</span><span class="log-result">INC-7d60 approved. Rollback triggered. Slack notified.</span>';
+      log.prepend(entry);
+    }
+
+    function dismissInc() {
+      const el = document.getElementById('inc-live');
+      el.querySelector('.status').className = 'status approved';
+      el.querySelector('.status').textContent = 'dismissed';
+      el.classList.add('approved');
+      document.getElementById('inc-actions').remove();
+      document.getElementById('s-open').textContent = '0';
+    }
+  </script>
+  <style>@keyframes spin { to { transform:rotate(360deg); } }</style>
+</body>
+</html>

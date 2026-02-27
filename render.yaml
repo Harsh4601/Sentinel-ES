@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: sentinel-es
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ES_HOST
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: llama-3.1-8b-instant
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: GITHUB_REPO
+        value: Harsh4601/Sentinel-ES
+      - key: SLACK_WEBHOOK_URL
+        sync: false
+      - key: SLACK_CHANNEL
+        value: "#incidents"
+      - key: SENTINEL_APPROVAL_MODE
+        value: strict
+      - key: ANOMALY_POLL_INTERVAL_SECONDS
+        value: "120"
+      - key: PYTHON_VERSION
+        value: "3.11.0"

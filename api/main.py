@@ -7,11 +7,14 @@ import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
+from pathlib import Path
+
 from dotenv import load_dotenv
 from elasticsearch import AsyncElasticsearch
 from fastapi import BackgroundTasks, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from agents.base_agent import AGENT_ACTIVITY_LOG
 from agents.orchestrator import OrchestratorAgent
@@ -122,6 +125,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+STATIC_DIR = Path(__file__).parent / "static"
+
+
+@app.get("/", include_in_schema=False)
+async def root():
+    """Serve the dashboard UI."""
+    from fastapi.responses import FileResponse
+    return FileResponse(STATIC_DIR / "index.html")
 
 
 @app.post("/webhook/alert")

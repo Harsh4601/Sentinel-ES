@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sentinel-ES Dashboard</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #232733;
+      --border: #2e3345;
+      --text: #e1e4ed;
+      --text-dim: #8b8fa3;
+      --accent: #6c5ce7;
+      --green: #00b894;
+      --red: #e74c3c;
+      --orange: #f39c12;
+      --yellow: #fdcb6e;
+      --blue: #74b9ff;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--blue));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+
+    .logo h1 { font-size: 20px; font-weight: 600; }
+    .logo span { color: var(--text-dim); font-size: 13px; font-weight: 400; }
+
+    .header-actions { display: flex; gap: 12px; align-items: center; }
+
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      display: inline-block; margin-right: 6px;
+    }
+    .status-dot.green { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .status-dot.red { background: var(--red); box-shadow: 0 0 8px var(--red); }
+    .status-dot.yellow { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
+
+    .btn {
+      padding: 8px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+    .btn-primary:hover { background: #5a4bd1; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+    }
+    .btn-outline:hover { border-color: var(--text-dim); color: var(--text); }
+
+    main { padding: 24px 32px; max-width: 1400px; margin: 0 auto; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .stat-label { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .stat-value { font-size: 28px; font-weight: 700; }
+    .stat-sub { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-header h2 { font-size: 15px; font-weight: 600; }
+    .card-body { padding: 16px 20px; }
+
+    .incident {
+      padding: 14px 16px;
+      border-radius: 8px;
+      background: var(--surface2);
+      margin-bottom: 10px;
+      border-left: 3px solid var(--border);
+    }
+    .incident.p1 { border-left-color: var(--red); }
+    .incident.p2 { border-left-color: var(--orange); }
+    .incident.p3 { border-left-color: var(--yellow); }
+    .incident.resolved { opacity: 0.6; }
+
+    .incident-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .severity-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .severity-badge.p1 { background: rgba(231,76,60,0.2); color: var(--red); }
+    .severity-badge.p2 { background: rgba(243,156,18,0.2); color: var(--orange); }
+    .severity-badge.p3 { background: rgba(253,203,110,0.2); color: var(--yellow); }
+
+    .status-badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .status-badge.open { background: rgba(231,76,60,0.15); color: var(--red); }
+    .status-badge.approved { background: rgba(0,184,148,0.15); color: var(--green); }
+    .status-badge.dismissed { background: rgba(139,143,163,0.15); color: var(--text-dim); }
+
+    .incident-cause { font-size: 13px; color: var(--text); line-height: 1.5; }
+    .incident-meta { font-size: 11px; color: var(--text-dim); margin-top: 8px; }
+    .incident-actions { margin-top: 10px; display: flex; gap: 8px; }
+    .incident-actions .btn { font-size: 11px; padding: 4px 12px; }
+
+    .log-entry {
+      display: grid;
+      grid-template-columns: 70px 90px 1fr;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .log-entry:last-child { border-bottom: none; }
+    .log-time { color: var(--text-dim); font-family: monospace; font-size: 12px; }
+    .log-agent { color: var(--blue); font-weight: 500; }
+    .log-result { color: var(--text); }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-dim);
+    }
+    .empty-state .icon { font-size: 36px; margin-bottom: 12px; }
+
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid transparent;
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .pulse { animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    .full-width { grid-column: 1 / -1; }
+
+    @media (max-width: 900px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .grid-2 { grid-template-columns: 1fr; }
+      main { padding: 16px; }
+      header { padding: 12px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <div class="logo-icon">S</div>
+      <div>
+        <h1>Sentinel-ES</h1>
+        <span>Autonomous SRE Agent Dashboard</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span id="es-status"><span class="status-dot yellow"></span>Connecting...</span>
+      <button class="btn btn-outline" onclick="refreshAll()">Refresh</button>
+      <button class="btn btn-primary" id="triggerBtn" onclick="triggerInvestigation()">Trigger Investigation</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Incidents</div>
+        <div class="stat-value" id="stat-total">-</div>
+        <div class="stat-sub" id="stat-total-sub">Loading...</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Open Incidents</div>
+        <div class="stat-value" id="stat-open" style="color: var(--red);">-</div>
+        <div class="stat-sub">Awaiting action</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Resolved</div>
+        <div class="stat-value" id="stat-resolved" style="color: var(--green);">-</div>
+        <div class="stat-sub">Auto-remediated</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Current Error Rate</div>
+        <div class="stat-value" id="stat-rate">-</div>
+        <div class="stat-sub" id="stat-rate-sub">vs baseline</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <h2>Recent Incidents</h2>
+          <span style="font-size:12px; color:var(--text-dim)" id="incident-count"></span>
+        </div>
+        <div class="card-body" id="incidents-list">
+          <div class="empty-state">
+            <div class="icon">&#128270;</div>
+            <p>Loading incidents...</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>Agent Activity Log</h2>
+          <span style="font-size:12px; color:var(--text-dim)" id="log-count"></span>
+        </div>
+        <div class="card-body" id="activity-log" style="max-height: 500px; overflow-y: auto;">
+          <div class="empty-state">
+            <div class="icon">&#128196;</div>
+            <p>Loading activity...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card full-width">
+      <div class="card-header">
+        <h2>System Architecture</h2>
+      </div>
+      <div class="card-body" style="padding: 24px; font-family: monospace; font-size: 13px; line-height: 1.8; color: var(--text-dim); white-space: pre;">
+ES Anomaly Detection  ──>  <span style="color:var(--accent)">Orchestrator</span>  ──>  ┌ <span style="color:var(--yellow)">Sleuth</span>  (APM Errors)
+   (3x spike)                              ├ <span style="color:var(--blue)">Historian</span> (Git Commits)
+                                           └ <span style="color:var(--green)">Scribe</span>   (Runbooks)
+                                                    │
+                              Conflict Resolution  <──┘
+                                      │
+                              <span style="color:var(--orange)">Slack Alert</span>  ──>  Human Approval  ──>  Rollback</div>
+    </div>
+  </main>
+
+  <script>
+    const API = '';
+
+    async function fetchHealth() {
+      try {
+        const res = await fetch(`${API}/health`);
+        const data = await res.json();
+        const el = document.getElementById('es-status');
+        const status = data.elasticsearch;
+        if (status === 'green' || status === 'yellow') {
+          el.innerHTML = `<span class="status-dot green"></span>ES Connected (${status})`;
+        } else {
+          el.innerHTML = `<span class="status-dot red"></span>ES Disconnected`;
+        }
+      } catch {
+        document.getElementById('es-status').innerHTML = `<span class="status-dot red"></span>API Offline`;
+      }
+    }
+
+    async function fetchIncidents() {
+      try {
+        const res = await fetch(`${API}/incidents`);
+        const data = await res.json();
+        const list = document.getElementById('incidents-list');
+        const incidents = data.incidents || [];
+
+        document.getElementById('stat-total').textContent = incidents.length;
+        document.getElementById('stat-total-sub').textContent = incidents.length ? `Last: ${timeAgo(incidents[0].timestamp)}` : 'No incidents';
+
+        const open = incidents.filter(i => i.status === 'open').length;
+        const resolved = incidents.filter(i => i.status === 'approved' || i.status === 'resolved').length;
+        document.getElementById('stat-open').textContent = open;
+        document.getElementById('stat-resolved').textContent = resolved;
+        document.getElementById('incident-count').textContent = `${incidents.length} total`;
+
+        if (!incidents.length) {
+          list.innerHTML = '<div class="empty-state"><div class="icon">&#9989;</div><p>No incidents detected. System healthy.</p></div>';
+          return;
+        }
+
+        list.innerHTML = incidents.map(i => {
+          const sev = (i.severity || 'P2').toLowerCase();
+          const status = (i.status || 'open').toLowerCase();
+          const cause = i.root_cause || 'Unknown';
+          const ts = i.timestamp ? new Date(i.timestamp).toLocaleTimeString() : '';
+          const id = i.incident_id || '';
+
+          return `
+            <div class="incident ${sev} ${status}">
+              <div class="incident-header">
+                <div>
+                  <span class="severity-badge ${sev}">${i.severity || 'P2'}</span>
+                  <span class="status-badge ${status}">${status}</span>
+                  <span style="font-size:11px; color:var(--text-dim); margin-left:8px;">${id}</span>
+                </div>
+                <span style="font-size:11px; color:var(--text-dim);">${ts}</span>
+              </div>
+              <div class="incident-cause">${truncate(cause, 200)}</div>
+              ${i.recommended_action ? `<div class="incident-meta">Action: ${truncate(i.recommended_action, 150)}</div>` : ''}
+              ${status === 'open' ? `
+                <div class="incident-actions">
+                  <button class="btn btn-primary" onclick="approveIncident('${id}')">Approve Rollback</button>
+                  <button class="btn btn-outline" onclick="dismissIncident('${id}')">Dismiss</button>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('');
+
+        // Update error rate from latest incident
+        if (incidents[0]) {
+          try {
+            const detail = await fetch(`${API}/incidents`);
+            const d = await detail.json();
+            // Try to get anomaly data from webhook
+          } catch {}
+        }
+      } catch {
+        document.getElementById('incidents-list').innerHTML = '<div class="empty-state"><div class="icon">&#9888;</div><p>Cannot reach API server</p></div>';
+      }
+    }
+
+    async function fetchActivityLog() {
+      try {
+        const res = await fetch(`${API}/activity-log`);
+        const data = await res.json();
+        const el = document.getElementById('activity-log');
+        const logs = (data.log || []).slice(-20).reverse();
+
+        document.getElementById('log-count').textContent = `${data.total_entries || 0} entries`;
+
+        if (!logs.length) {
+          el.innerHTML = '<div class="empty-state"><div class="icon">&#128196;</div><p>No activity yet</p></div>';
+          return;
+        }
+
+        el.innerHTML = logs.map(l => `
+          <div class="log-entry">
+            <span class="log-time">${l.timestamp ? l.timestamp.substring(11, 19) : ''}</span>
+            <span class="log-agent">${l.agent || ''}</span>
+            <span class="log-result">${truncate(l.result || '', 80)}</span>
+          </div>
+        `).join('');
+      } catch {
+        document.getElementById('activity-log').innerHTML = '<div class="empty-state"><p>Cannot load activity log</p></div>';
+      }
+    }
+
+    async function triggerInvestigation() {
+      const btn = document.getElementById('triggerBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Investigating...';
+
+      try {
+        const res = await fetch(`${API}/webhook/alert`, { method: 'POST' });
+        const data = await res.json();
+
+        if (data.status === 'no_anomaly') {
+          btn.textContent = 'No Anomaly Found';
+          btn.style.background = 'var(--green)';
+
+          document.getElementById('stat-rate').textContent = data.current_rate || '0';
+          document.getElementById('stat-rate-sub').textContent = `Baseline: ${data.baseline_rate || '0'}`;
+        } else {
+          btn.textContent = 'Incident Created!';
+          btn.style.background = 'var(--red)';
+
+          if (data.anomaly_data) {
+            document.getElementById('stat-rate').textContent = data.anomaly_data.current_rate || '-';
+            document.getElementById('stat-rate-sub').textContent = `Baseline: ${data.anomaly_data.baseline_rate || '-'}`;
+          }
+        }
+
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.textContent = 'Trigger Investigation';
+          btn.style.background = '';
+          refreshAll();
+        }, 2000);
+      } catch {
+        btn.textContent = 'API Error';
+        btn.style.background = 'var(--red)';
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.textContent = 'Trigger Investigation';
+          btn.style.background = '';
+        }, 2000);
+      }
+    }
+
+    async function approveIncident(id) {
+      await fetch(`${API}/approve/${id}`, { method: 'POST' });
+      refreshAll();
+    }
+
+    async function dismissIncident(id) {
+      await fetch(`${API}/dismiss/${id}`, { method: 'POST' });
+      refreshAll();
+    }
+
+    function truncate(str, len) {
+      return str.length > len ? str.substring(0, len) + '...' : str;
+    }
+
+    function timeAgo(ts) {
+      if (!ts) return '';
+      const diff = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+      if (diff < 60) return `${diff}s ago`;
+      if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+      return `${Math.floor(diff / 3600)}h ago`;
+    }
+
+    function refreshAll() {
+      fetchHealth();
+      fetchIncidents();
+      fetchActivityLog();
+    }
+
+    refreshAll();
+    setInterval(refreshAll, 15000);
+  </script>
+</body>
+</html>
